@@ -2,15 +2,18 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import * as mysql from 'mysql2/promise';
-import { SignUpUsersDto } from './dto/signup-users.dto';
+import { AuthSignUpDto } from './dto/auth-signup.dto';
+import { JwtPayload } from './auth.type';
 
 @Injectable()
-export class UsersService {
+export class AuthService {
   private connection: mysql.Connection;
 
-  constructor() {
+  constructor(private jwtService: JwtService) {
     this.createConnection();
   }
 
@@ -32,23 +35,28 @@ export class UsersService {
     return rows;
   }
 
-  getAllUsers() {
-    return this.query('SELECT * FROM users');
-  }
-
   async signIn(email: string, password: string) {
-    const users = await this.query(
+    const users = (await this.query(
       `SELECT * FROM users 
       WHERE users.email="${email}"
       AND users.password="${password}"
       `,
-    );
+    )) as any[];
 
-    return users;
+    if (!users.length) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload: JwtPayload = {
+      username: users[0].username,
+    };
+    const accessToken = await this.jwtService.sign(payload);
+
+    return accessToken;
   }
 
-  async signUp(signUpUsersDto: SignUpUsersDto) {
-    const { email, username, password, doubleCheck } = signUpUsersDto;
+  async signUp(authSignUpDto: AuthSignUpDto) {
+    const { email, username, password, doubleCheck } = authSignUpDto;
     if (doubleCheck !== password) {
       throw new BadRequestException('Password가 일치하지 않습니다.');
     }
@@ -69,5 +77,19 @@ export class UsersService {
     );
 
     return true;
+  }
+
+  async findUserByUsername(username: string) {
+    const user = (await this.query(`
+      SELECT * FROM users WHERE users.username = "${username}"
+    `)) as any[];
+
+    const isUserExists = user.length;
+
+    if (!isUserExists) {
+      throw new UnauthorizedException();
+    }
+
+    return user;
   }
 }

@@ -12,16 +12,18 @@ export class GoalsService {
 
   async getAllGoals(userId: number) {
     return await this.authService.query(`
-    SELECT goals.id, goals.goal_title, goals.goal_date, goals.goal_ispoint, goals.user_id  FROM users
+    SELECT goals.id, goals.goal_title, DATE_FORMAT(goals.goal_date, '%Y-%m-%d %H:%i:%s') as goal_date, goals.goal_ispoint, goals.user_id  FROM users
     INNER JOIN goals ON users.id = goals.user_id 
     WHERE user_id = ${userId}
 	`);
   }
 
   async createGoal(title: string, userId: number) {
-    return await this.authService.query(`
+    await this.authService.query(`
     INSERT INTO goals (goal_title, goal_ispoint, user_id) VALUES ("${title}", 0, ${userId})
     `);
+
+    return await this.getAllGoals(userId);
   }
 
   async updateCheck(goalId: string) {
@@ -54,7 +56,13 @@ export class GoalsService {
     }
 
     await this.authService.query(`
-    DELETE FROM goals WHERE id = ${goalId}
+    DELETE FROM todolist 
+    WHERE goal_id = ${goalId}
+    `);
+
+    await this.authService.query(`
+    DELETE FROM goals 
+    WHERE id = ${goalId}
     `);
   }
 }

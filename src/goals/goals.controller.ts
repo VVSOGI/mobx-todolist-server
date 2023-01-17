@@ -11,7 +11,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { User } from 'src/auth/auth.type';
 import { GetUser } from 'src/auth/get-user.decorator';
-import { CreateTodoDto } from './dto/create-todo.dto';
+import { CreateGoalDto } from './dto/create-goal.dto';
 import { GoalsService } from './goals.service';
 
 @Controller('goals')
@@ -20,17 +20,17 @@ export class GoalsController {
   constructor(private goalsService: GoalsService) {}
 
   @Get()
-  getAllGoals(@GetUser() user: User) {
-    return this.goalsService.getAllGoals(user.id);
+  async getAllGoals(@GetUser() user: User) {
+    return await this.goalsService.getAllGoals(user.id);
   }
 
   @Post()
-  createGoal(@Body() createTodoDto: CreateTodoDto, @GetUser() user: User) {
-    const { contents } = createTodoDto;
+  createGoal(@Body() createGoalDto: CreateGoalDto, @GetUser() user: User) {
+    const { contents } = createGoalDto;
     return this.goalsService.createGoal(contents, user.id);
   }
 
-  @Patch('check/:id')
+  @Patch(':id')
   updateCheck(@Param('id') id: string) {
     return this.goalsService.updateCheck(id);
   }
